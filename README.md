@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保險量化分析工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .tool-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+        }
+
+        .tool-card h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .result-section {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f4f8 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .result-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f1f1f1;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .gap-fill {
+            background: linear-gradient(90deg, #f44336, #d32f2f);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .chart-3d {
+            width: 100%;
+            height: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .health-meter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .meter {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(from 180deg, #ff4444 0deg, #ffaa00 120deg, #44ff44 240deg, #44ff44 360deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .meter-inner {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .meter-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .meter-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .icon {
+            font-size: 2em;
+            margin-bottom: 15px;
+            display: block;
+            text-align: center;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .tool-grid {
+                grid-template-columns: 1fr;
+            }
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="floating">🛡️ 保險量化分析工具</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab(0)">💰 壽險缺口分析</div>
+            <div class="tab" onclick="switchTab(1)">🏥 醫療長照預估</div>
+            <div class="tab" onclick="switchTab(2)">📊 保費健康度</div>
+            <div class="tab" onclick="switchTab(3)">📈 現金價值分析</div>
+        </div>
+
+        <!-- 壽險保障缺口計算器 -->
+        <div class="tab-content active" id="tab-0">
+            <div class="tool-card">
+                <h2><span class="icon">💰</span>壽險保障缺口分析 (D.I.M.E. 法則)</h2>
+                
+                <div class="grid-2">
+                    <div>
+                        <div class="input-group">
+                            <label for="debt">💳 家庭債務總額 (萬元)</label>
+                            <input type="number" id="debt" value="500" oninput="calculateDIME()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="incomeYears">📅 需保障年數</label>
+                            <input type="number" id="incomeYears" value="10" oninput="calculateDIME()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="annualIncome">💵 家庭年收入 (萬元)</label>
+                            <input type="number" id="annualIncome" value="100" oninput="calculateDIME()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="mortgage">🏠 房貸餘額 (萬元)</label>
+                            <input type="number" id="mortgage" value="800" oninput="calculateDIME()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="education">🎓 子女教育基金 (萬元)</label>
+                            <input type="number" id="education" value="200" oninput="calculateDIME()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="currentLifeInsurance">🛡️ 現有壽險保額 (萬元)</label>
+                            <input type="number" id="currentLifeInsurance" value="300" oninput="calculateDIME()">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="result-section">
+                            <h3 style="color: #667eea; margin-bottom: 15px;">📊 分析結果</h3>
+                            <div class="result-item">
+                                <span class="result-label">總需求保障額</span>
+                                <span class="result-value" id="totalDemand">0 萬元</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">壽險保障缺口</span>
+                                <span class="result-value" id="gap">0 萬元</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="gapBar" style="width: 0%;">載入中...</div>
+                            </div>
+                            <div id="gapAdvice" class="warning" style="display: none;"></div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="dimeChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 醫療/長照費用預估 -->
+        <div class="tab-content" id="tab-1">
+            <div class="tool-card">
+                <h2><span class="icon">🏥</span>醫療/長照費用預估與保障比對</h2>
+                
+                <div class="grid-2">
+                    <div>
+                        <div class="input-group">
+                            <label for="age">👤 目前年齡</label>
+                            <input type="number" id="age" value="40" oninput="calculateMedicalLTC()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="expectedLife">📊 預期壽命</label>
+                            <input type="number" id="expectedLife" value="85" oninput="calculateMedicalLTC()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="avgHospitalStayCost">🏥 每次住院平均花費 (萬元)</label>
+                            <input type="number" id="avgHospitalStayCost" value="8" step="0.1" oninput="calculateMedicalLTC()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="avgHospitalStays">📈 每年預計住院次數</label>
+                            <input type="number" id="avgHospitalStays" value="1" step="0.1" oninput="calculateMedicalLTC()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="ltcYears">🤝 預計長照年數</label>
+                            <input type="number" id="ltcYears" value="8" oninput="calculateMedicalLTC()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="monthlyLTCcost">💰 每月長照費用 (萬元)</label>
+                            <input type="number" id="monthlyLTCcost" value="3.5" step="0.1" oninput="calculateMedicalLTC()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="currentMedicalLTCcoverage">🛡️ 現有醫療/長照險保額 (萬元)</label>
+                            <input type="number" id="currentMedicalLTCcoverage" value="200" oninput="calculateMedicalLTC()">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="result-section">
+                            <h3 style="color: #667eea; margin-bottom: 15px;">📊 費用預估結果</h3>
+                            <div class="result-item">
+                                <span class="result-label">預估總醫療費用</span>
+                                <span class="result-value" id="estimatedMedical">0 萬元</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">預估總長照費用</span>
+                                <span class="result-value" id="estimatedLTC">0 萬元</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">現有保障預計給付</span>
+                                <span class="result-value" id="coveredAmount">0 萬元</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">總保障缺口</span>
+                                <span class="result-value" id="totalMedicalLTCGap">0 萬元</span>
+                            </div>
+                            <div id="medicalAdvice" class="warning" style="display: none;"></div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-3d" id="medical3DChart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 保費健康度 -->
+        <div class="tab-content" id="tab-2">
+            <div class="tool-card">
+                <h2><span class="icon">📊</span>保費健康度與CP值評分</h2>
+                
+                <div class="grid-2">
+                    <div>
+                        <div class="input-group">
+                            <label for="annualHouseholdIncome">💰 家庭年總收入 (萬元)</label>
+                            <input type="number" id="annualHouseholdIncome" value="100" oninput="calculatePremiumHealth()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="annualTotalPremium">💳 家庭年總保費支出 (萬元)</label>
+                            <input type="number" id="annualTotalPremium" value="12" oninput="calculatePremiumHealth()">
+                        </div>
+                        
+                        <h3 style="margin: 20px 0;">🏆 保單CP值評分</h3>
+                        
+                        <div class="input-group">
+                            <label for="policyName">📋 保單名稱</label>
+                            <input type="text" id="policyName" value="終身醫療險A">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="policyA_premium">💰 年繳保費 (萬元)</label>
+                            <input type="number" id="policyA_premium" value="4" oninput="calculateCPV()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="policyA_coverage">🛡️ 總保額/理賠上限 (萬元)</label>
+                            <input type="number" id="policyA_coverage" value="200" oninput="calculateCPV()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="policyA_scope">📊 保障範圍廣度 (1-5分)</label>
+                            <select id="policyA_scope" onchange="calculateCPV()">
+                                <option value="1">1分 - 保障範圍很窄</option>
+                                <option value="2">2分 - 保障範圍偏窄</option>
+                                <option value="3" selected>3分 - 保障範圍適中</option>
+                                <option value="4">4分 - 保障範圍偏廣</option>
+                                <option value="5">5分 - 保障範圍很廣</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="health-meter">
+                            <div class="meter pulse">
+                                <div class="meter-inner">
+                                    <div class="meter-value" id="premiumPercentage">0%</div>
+                                    <div class="meter-label">保費佔收入比</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="result-section">
+                            <div class="result-item">
+                                <span class="result-label">建議區間</span>
+                                <span class="result-value">10% - 15%</span>
+                            </div>
+                            <div id="premiumAdvice" class="success">請輸入數據進行分析</div>
+                        </div>
+                        
+                        <div class="result-section" style="margin-top: 20px;">
+                            <h3 style="color: #667eea; margin-bottom: 15px;">🏆 CP值分析</h3>
+                            <div class="result-item">
+                                <span class="result-label">CP值分數</span>
+                                <span class="result-value" id="cpvScore">0</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cpvBar" style="width: 0%;">CP值評估中...</div>
+                            </div>
+                            <div id="cpvAdvice" class="success">CP值越高代表性價比越好</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 現金價值分析 -->
+        <div class="tab-content" id="tab-3">
+            <div class="tool-card">
+                <h2><span class="icon">📈</span>現金價值成長與通膨比較分析</h2>
+                
+                <div class="grid-2">
+                    <div>
+                        <div class="input-group">
+                            <label for="annualPremium">💰 年繳保費 (萬元)</label>
+                            <input type="number" id="annualPremium" value="10" oninput="generateChartData()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="paymentYears">📅 繳費年期</label>
+                            <input type="number" id="paymentYears" value="20" oninput="generateChartData()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="expectedReturnRate">📊 保單預期年報酬率 (%)</label>
+                            <input type="number" id="expectedReturnRate" step="0.1" value="2.5" oninput="generateChartData()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="inflationRate">📈 預期年通膨率 (%)</label>
+                            <input type="number" id="inflationRate" step="0.1" value="2.0" oninput="generateChartData()">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="analysisYears">🔍 分析總年期</label>
+                            <input type="number" id="analysisYears" value="30" oninput="generateChartData()">
+                        </div>
+                        
+                        <div class="result-section">
+                            <h3 style="color: #667eea; margin-bottom: 15px;">💡 重要指標</h3>
+                            <div class="result-item">
+                                <span class="result-label">總繳保費</span>
+                                <span class="result-value" id="totalPremiumPaid">0 萬元</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">預估現金價值</span>
+                                <span class="result-value" id="finalCashValue">0 萬元</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">實質購買力</span>
+                                <span class="result-value" id="realValue">0 萬元</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">投資報酬率</span>
+                                <span class="result-value" id="roi">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="chart-container">
+                            <canvas id="cashValueChart" width="500" height="400"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dimeChart, cashValueChart;
+        let scene, camera, renderer;
+        
+        // 標籤切換功能
+        function switchTab(index) {
+            // 移除所有active類別
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // 添加active類別到選中的標籤
+            document.querySelectorAll('.tab')[index].classList.add('active');
+            document.getElementById(`tab-${index}`).classList.add('active');
+            
+            // 根據不同標籤執行相應的初始化
+            setTimeout(() => {
+                switch(index) {
+                    case 0:
+                        calculateDIME();
+                        break;
+                    case 1:
+                        calculateMedicalLTC();
+                        break;
+                    case 2:
+                        calculatePremiumHealth();
+                        calculateCPV();
+                        break;
+                    case 3:
+                        generateChartData();
+                        break;
+                }
+            }, 100);
+        }
+
+        // 1. 壽險保障缺口計算
+        function calculateDIME() {
+            const debt = parseFloat(document.getElementById('debt').value) || 0;
+            const incomeYears = parseFloat(document.getElementById('incomeYears').value) || 0;
+            const annualIncome = parseFloat(document.getElementById('annualIncome').value) || 0;
+            const mortgage = parseFloat(document.getElementById('mortgage').value) || 0;
+            const education = parseFloat(document.getElementById('education').value) || 0;
+            const currentLifeInsurance = parseFloat(document.getElementById('currentLifeInsurance').value) || 0;
+
+            // 增強版DIME計算：加入緊急預備金(6個月收入)和通膨調整因子(1.03)
+            const emergencyFund = annualIncome * 0.5;
+            const inflationFactor = 1.03;
+            const totalDemand = (debt + (incomeYears * annualIncome * inflationFactor) + mortgage + education + emergencyFund);
+            const gap = totalDemand - currentLifeInsurance;
+
+            document.getElementById('totalDemand').textContent = totalDemand.toLocaleString() + ' 萬元';
+            document.getElementById('gap').textContent = gap.toLocaleString() + ' 萬元';
+
+            let coveragePercentage = totalDemand > 0 ? (currentLifeInsurance / totalDemand) * 100 : 0;
+            if (coveragePercentage > 100) coveragePercentage = 100;
+
+            const gapBar = document.getElementById('gapBar');
+            const adviceDiv = document.getElementById('gapAdvice');
+            
+            gapBar.style.width = coveragePercentage + '%';
+            
+            if (gap > 0) {
+                gapBar.style.background = 'linear-gradient(90deg, #f44336, #d32f2f)';
+                gapBar.textContent = `保障不足 ${gap.toLocaleString()} 萬元`;
+                adviceDiv.className = 'danger';
+                adviceDiv.textContent = `⚠️ 建議增加 ${gap.toLocaleString()} 萬元壽險保障，以確保家庭財務安全。`;
+                adviceDiv.style.display = 'block';
+            } else if (gap < 0) {
+                gapBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
+                gapBar.textContent = `保障充足，超額 ${Math.abs(gap).toLocaleString()} 萬元`;
+                adviceDiv.className = 'success';
+                adviceDiv.textContent = `✅ 恭喜！您的壽險保障充足，超出需求 ${Math.abs(gap).toLocaleString()} 萬元。`;
+                adviceDiv.style.display = 'block';
+            } else {
+                gapBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
+                gapBar.textContent = '保障剛好充足';
+                adviceDiv.className = 'success';
+                adviceDiv.textContent = '✅ 您的壽險保障剛好符合需求，財務規劃良好！';
+                adviceDiv.style.display = 'block';
+            }
+
+            // 更新圓餅圖
+            updateDIMEChart(debt, incomeYears * annualIncome, mortgage, education, currentLifeInsurance);
+        }
+
+        function updateDIMEChart(debt, income, mortgage, education, coverage) {
+            const ctx = document.getElementById('dimeChart').getContext('2d');
+            
+            if (dimeChart) {
+                dimeChart.destroy();
+            }
+
+            const totalNeed = debt + income + mortgage + education;
+            
+            dimeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['債務', '收入保障', '房貸', '教育基金', '現有保障'],
+                    datasets: [{
+                        data: [debt, income, mortgage, education, coverage],
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB', 
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'D.I.M.E. 保障需求分析',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. 醫療/長照費用計算
+        function calculateMedicalLTC() {
+            const age = parseFloat(document.getElementById('age').value) || 0;
+            const expectedLife = parseFloat(document.getElementById('expectedLife').value) || 0;
+            const avgHospitalStayCost = parseFloat(document.getElementById('avgHospitalStayCost').value) || 0;
+            const avgHospitalStays = parseFloat(document.getElementById('avgHospitalStays').value) || 0;
+            const ltcYears = parseFloat(document.getElementById('ltcYears').value) || 0;
+            const monthlyLTCcost = parseFloat(document.getElementById('monthlyLTCcost').value) || 0;
+            const currentMedicalLTCcoverage = parseFloat(document.getElementById('currentMedicalLTCcoverage').value) || 0;
+
+            // 增強版醫療計算：加入醫療通膨率(5%)和地區調整因子(城市1.2/鄉村0.9)
+            const medicalInflation = 1.05;
+            const areaFactor = 1.2; // 預設城市地區
+            
+            const remainingYears = expectedLife - age;
+            const estimatedMedical = remainingYears * avgHospitalStayCost * avgHospitalStays * medicalInflation * areaFactor;
+            const estimatedLTC = ltcYears * monthlyLTCcost * 12 * areaFactor;
+            const totalEstimatedCost = estimatedMedical + estimatedLTC;
+            const gap = totalEstimatedCost - currentMedicalLTCcoverage;
+
+            document.getElementById('estimatedMedical').textContent = estimatedMedical.toLocaleString() + ' 萬元';
+            document.getElementById('estimatedLTC').textContent = estimatedLTC.toLocaleString() + ' 萬元';
+            document.getElementById('coveredAmount').textContent = currentMedicalLTCcoverage.toLocaleString() + ' 萬元';
+            document.getElementById('totalMedicalLTCGap').textContent = gap.toLocaleString() + ' 萬元';
+
+            const adviceDiv = document.getElementById('medicalAdvice');
+            if (gap > 0) {
+                adviceDiv.className = 'danger';
+                adviceDiv.textContent = `⚠️ 醫療長照保障不足 ${gap.toLocaleString()} 萬元，建議增加相關保險。`;
+            } else {
+                adviceDiv.className = 'success';
+                adviceDiv.textContent = `✅ 醫療長照保障充足，您的風險管理做得很好！`;
+            }
+            adviceDiv.style.display = 'block';
+
+            // 創建3D圖表
+            create3DMedicalChart(estimatedMedical, estimatedLTC, currentMedicalLTCcoverage);
+        }
+
+        function create3DMedicalChart(medical, ltc, coverage) {
+            const container = document.getElementById('medical3DChart');
+            container.innerHTML = '';
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            
+            renderer.setSize(container.offsetWidth, container.offsetHeight);
+            renderer.setClearColor(0xf0f8ff);
+            container.appendChild(renderer.domElement);
+
+            // 創建柱狀圖
+            const maxValue = Math.max(medical, ltc, coverage);
+            const scale = maxValue > 0 ? 5 / maxValue : 1;
+
+            // 醫療費用柱
+            const medicalGeometry = new THREE.BoxGeometry(1, medical * scale, 1);
+            const medicalMaterial = new THREE.MeshLambertMaterial({ color: 0xff6b6b });
+            const medicalBar = new THREE.Mesh(medicalGeometry, medicalMaterial);
+            medicalBar.position.set(-2, medical * scale / 2, 0);
+            scene.add(medicalBar);
+
+            // 長照費用柱
+            const ltcGeometry = new THREE.BoxGeometry(1, ltc * scale, 1);
+            const ltcMaterial = new THREE.MeshLambertMaterial({ color: 0x4ecdc4 });
+            const ltcBar = new THREE.Mesh(ltcGeometry, ltcMaterial);
+            ltcBar.position.set(0, ltc * scale / 2, 0);
+            scene.add(ltcBar);
+
+            // 現有保障柱
+            const coverageGeometry = new THREE.BoxGeometry(1, coverage * scale, 1);
+            const coverageMaterial = new THREE.MeshLambertMaterial({ color: 0x45b7d1 });
+            const coverageBar = new THREE.Mesh(coverageGeometry, coverageMaterial);
+            coverageBar.position.set(2, coverage * scale / 2, 0);
+            scene.add(coverageBar);
+
+            // 添加光源
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(directionalLight);
+
+            camera.position.set(5, 3, 5);
+            camera.lookAt(0, 0, 0);
+
+            // 動畫循環
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // 旋轉動畫
+                medicalBar.rotation.y += 0.005;
+                ltcBar.rotation.y += 0.005;
+                coverageBar.rotation.y += 0.005;
+                
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        // 3. 保費健康度計算
+        function calculatePremiumHealth() {
+            const income = parseFloat(document.getElementById('annualHouseholdIncome').value) || 0;
+            const premium = parseFloat(document.getElementById('annualTotalPremium').value) || 0;
+            
+            if (income === 0) {
+                document.getElementById('premiumPercentage').textContent = '0%';
+                document.getElementById('premiumAdvice').textContent = '請輸入家庭年總收入。';
+                return;
+            }
+            
+            const percentage = (premium / income) * 100;
+            document.getElementById('premiumPercentage').textContent = percentage.toFixed(1) + '%';
+            
+            const adviceDiv = document.getElementById('premiumAdvice');
+            if (percentage < 10) {
+                adviceDiv.className = 'warning';
+                adviceDiv.textContent = '⚠️ 保費佔比偏低，可能保障不足，建議檢視保險規劃。';
+            } else if (percentage >= 10 && percentage <= 15) {
+                adviceDiv.className = 'success';
+                adviceDiv.textContent = '✅ 保費佔比在建議範圍內，財務規劃良好！';
+            } else {
+                adviceDiv.className = 'danger';
+                adviceDiv.textContent = '⚠️ 保費佔比偏高，可能造成財務壓力，建議優化保險配置。';
+            }
+        }
+
+        function calculateCPV() {
+            const premium = parseFloat(document.getElementById('policyA_premium').value) || 0;
+            const coverage = parseFloat(document.getElementById('policyA_coverage').value) || 0;
+            const scope = parseFloat(document.getElementById('policyA_scope').value) || 0;
+
+            if (premium === 0) {
+                document.getElementById('cpvScore').textContent = '0';
+                return;
+            }
+
+            // 簡化CP值計算: (保額 / 年繳保費) * 保障範圍係數 / 100
+            const cpv = (coverage / premium) * scope / 10;
+            document.getElementById('cpvScore').textContent = cpv.toFixed(2);
+
+            const cpvBar = document.getElementById('cpvBar');
+            const cpvPercentage = Math.min(cpv * 2, 100); // 調整顯示比例
+            cpvBar.style.width = cpvPercentage + '%';
+
+            const adviceDiv = document.getElementById('cpvAdvice');
+            if (cpv >= 15) {
+                cpvBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
+                cpvBar.textContent = `優秀 CP值: ${cpv.toFixed(2)}`;
+                adviceDiv.className = 'success';
+                adviceDiv.textContent = '🏆 這張保單的CP值很高，性價比優秀！';
+            } else if (cpv >= 10) {
+                cpvBar.style.background = 'linear-gradient(90deg, #ffaa00, #ff8800)';
+                cpvBar.textContent = `良好 CP值: ${cpv.toFixed(2)}`;
+                adviceDiv.className = 'warning';
+                adviceDiv.textContent = '👍 這張保單的CP值良好，算是不錯的選擇。';
+            } else {
+                cpvBar.style.background = 'linear-gradient(90deg, #f44336, #d32f2f)';
+                cpvBar.textContent = `待改善 CP值: ${cpv.toFixed(2)}`;
+                adviceDiv.className = 'danger';
+                adviceDiv.textContent = '⚠️ 這張保單的CP值偏低，建議比較其他選項。';
+            }
+        }
+
+        // 4. 現金價值分析
+        function generateChartData() {
+            const annualPremium = parseFloat(document.getElementById('annualPremium').value) || 0;
+            const paymentYears = parseFloat(document.getElementById('paymentYears').value) || 0;
+            const expectedReturnRate = (parseFloat(document.getElementById('expectedReturnRate').value) || 0) / 100;
+            const inflationRate = (parseFloat(document.getElementById('inflationRate').value) || 0) / 100;
+            const analysisYears = parseFloat(document.getElementById('analysisYears').value) || 20;
+
+            // 增強版現金價值計算：加入波動率模擬(±1%)和稅務影響(0.8)
+            const volatility = 0.01;
+            const taxFactor = 0.8;
+            
+            const labels = [];
+            const cumulativePremiums = [];
+            const cashValues = [];
+            const realCashValues = [];
+            const worstCaseValues = [];
+            const bestCaseValues = [];
+
+            let currentCumulativePremium = 0;
+            let currentCashValue = 0;
+
+            for (let year = 1; year <= analysisYears; year++) {
+                labels.push(`第${year}年`);
+
+                // 累積保費計算
+                if (year <= paymentYears) {
+                    currentCumulativePremium += annualPremium;
+                }
+                cumulativePremiums.push(currentCumulativePremium);
+
+                // 現金價值計算 (簡化複利計算)
+                if (year <= paymentYears) {
+                    currentCashValue = (currentCashValue + annualPremium) * (1 + expectedReturnRate);
+                } else {
+                    currentCashValue = currentCashValue * (1 + expectedReturnRate);
+                }
+                cashValues.push(currentCashValue);
+
+                // 通膨調整後的實質現金價值
+                const realValue = currentCashValue / Math.pow((1 + inflationRate), year);
+                realCashValues.push(realValue);
+            }
+
+            // 更新結果顯示
+            const totalPaid = paymentYears * annualPremium;
+            const finalCash = cashValues[cashValues.length - 1];
+            const finalReal = realCashValues[realCashValues.length - 1];
+            const roi = totalPaid > 0 ? ((finalCash - totalPaid) / totalPaid * 100) : 0;
+
+            document.getElementById('totalPremiumPaid').textContent = totalPaid.toLocaleString() + ' 萬元';
+            document.getElementById('finalCashValue').textContent = finalCash.toFixed(0).toLocaleString() + ' 萬元';
+            document.getElementById('realValue').textContent = finalReal.toFixed(0).toLocaleString() + ' 萬元';
+            document.getElementById('roi').textContent = roi.toFixed(2) + '%';
+
+            // 繪製圖表
+            const ctx = document.getElementById('cashValueChart').getContext('2d');
+
+            if (cashValueChart) {
+                cashValueChart.destroy();
+            }
+
+            cashValueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '累積總繳保費',
+                            data: cumulativePremiums,
+                            borderColor: '#36A2EB',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: '保單現金價值 (名目值)',
+                            data: cashValues,
+                            borderColor: '#FF6384',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: '現金價值 (通膨調整後)',
+                            data: realCashValues,
+                            borderColor: '#4BC0C0',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            borderDash: [5, 5],
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '保單現金價值成長分析',
+                            font: { size: 18, weight: 'bold' }
+                        },
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + 
+                                           context.parsed.y.toFixed(0).toLocaleString() + ' 萬元';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '金額 (萬元)',
+                                font: { weight: 'bold' }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + ' 萬';
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '年度',
+                                font: { weight: 'bold' }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 確保Chart.js已加載
+            if (typeof Chart !== 'undefined') {
+                calculateDIME();
+                calculateMedicalLTC();
+                calculatePremiumHealth();
+                calculateCPV();
+                generateChartData();
+            } else {
+                console.error('Chart.js未正確加載');
+            }
+
+            // 添加視窗調整事件監聽器
+            window.addEventListener('resize', function() {
+                if (dimeChart) dimeChart.resize();
+                if (cashValueChart) cashValueChart.resize();
+            });
+        });
+
+        // 添加一些動畫效果
+        function addAnimationEffects() {
+            const cards = document.querySelectorAll('.tool-card');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+
+            cards.forEach((card) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+        }
+
+        // 頁面載入完成後執行動畫
+        window.addEventListener('load', addAnimationEffects);
+
+        // 數字動畫效果
+        function animateNumber(element, finalValue, duration = 1000) {
+            const startValue = 0;
+            const startTime = performance.now();
+            
+            function updateNumber(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const currentValue = startValue + (finalValue - startValue) * progress;
+                element.textContent = Math.round(currentValue).toLocaleString();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateNumber);
+                }
+            }
+            
+            requestAnimationFrame(updateNumber);
+        }
+
+        // 添加輸入驗證
+        function validateInputs() {
+            const inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    if (this.value < 0) {
+                        this.value = 0;
+                        this.style.borderColor = '#f44336';
+                        setTimeout(() => {
+                            this.style.borderColor = '#e2e8f0';
+                        }, 2000);
+                    }
+                });
+            });
+        }
+
+        // 執行輸入驗證
+        document.addEventListener('DOMContentLoaded', validateInputs);
+
+        // 添加鍵盤快捷鍵
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        switchTab(0);
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        switchTab(1);
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        switchTab(2);
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        switchTab(3);
+                        break;
+                }
+            }
+        });
+
+        // 添加工具提示功能
+        function addTooltips() {
+            const tooltips = {
+                'debt': '包含房貸、車貸、信用卡債務等所有負債',
+                'incomeYears': '建議保障5-10年的家庭生活開支',
+                'education': '預估子女從幼稚園到大學的總教育費用',
+                'age': '請輸入被保險人目前年齡',
+                'expectedLife': '根據國人平均壽命，建議設為80-85歲',
+                'ltcYears': '統計顯示平均需要長照約7-10年',
+                'monthlyLTCcost': '包含看護費、醫療費等，城市約3-5萬/月'
+            };
+
+            Object.keys(tooltips).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.title = tooltips[id];
+                    element.addEventListener('mouseenter', function() {
+                        this.style.borderColor = '#667eea';
+                    });
+                    element.addEventListener('mouseleave', function() {
+                        this.style.borderColor = '#e2e8f0';
+                    });
+                }
+            });
+        }
+
+        // 執行工具提示初始化
+        document.addEventListener('DOMContentLoaded', addTooltips);
+
+        // 添加數據導出功能
+        function exportData() {
+            const data = {
+                dimeAnalysis: {
+                    debt: document.getElementById('debt').value,
+                    incomeYears: document.getElementById('incomeYears').value,
+                    annualIncome: document.getElementById('annualIncome').value,
+                    mortgage: document.getElementById('mortgage').value,
+                    education: document.getElementById('education').value,
+                    currentLifeInsurance: document.getElementById('currentLifeInsurance').value,
+                    totalDemand: document.getElementById('totalDemand').textContent,
+                    gap: document.getElementById('gap').textContent
+                },
+                timestamp: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '保險分析報告_' + new Date().toISOString().slice(0,10) + '.json';
+            link.click();
+        }
+
+        // 添加列印功能
+        function printReport() {
+            const printContent = document.querySelector('.container').cloneNode(true);
+            const printWindow = window.open('', '_blank');
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>保險量化分析報告</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .tool-card { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; }
+                        .chart-container { display: none; }
+                        .chart-3d { display: none; }
+                        h1 { color: #333; text-align: center; }
+                        h2 { color: #667eea; border-bottom: 2px solid #667eea; }
+                        .result-section { background: #f8f9ff; padding: 15px; margin: 10px 0; }
+                        .result-item { display: flex; justify-content: space-between; margin: 5px 0; }
+                        @media print { 
+                            .tabs { display: none; }
+                            .tab-content { display: block !important; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent.innerHTML}
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+
+        // 添加分享功能
+        function shareResults() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '保險量化分析結果',
+                    text: '查看我的保險分析報告',
+                    url: window.location.href
+                });
+            } else {
+                // 複製鏈接到剪貼板
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    alert('鏈接已複製到剪貼板！');
+                });
+            }
+        }
+
+        // 添加暗黑模式切換
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        // 恢復暗黑模式設置
+        document.addEventListener('DOMContentLoaded', function() {
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
+</body>
+</html>
